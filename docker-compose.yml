@@ -1,0 +1,21 @@
+version: '2'
+
+services:
+
+  nats:
+    image: nats-streaming
+    container_name: nats
+    volumes:
+      - "./var/db/nats:/datastore"
+    command:
+      - '-store=file'
+      - '-dir=datastore'
+      - '-m=8222'
+      - '-cid=nats-cluster'
+      - '-SD=true'
+      - '-hbi=10s'
+      - '-hbt=3s'
+      - '-hbf=1'
+    ports:
+      - "8222:8222"
+      - "4222:4222"
