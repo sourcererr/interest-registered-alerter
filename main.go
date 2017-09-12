@@ -41,8 +41,8 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "slack-url, su",
-			Value:  "https://slackurl.com",
-			Usage:  "slack alert url",
+			Value:  "https://hooks.slack.com/services/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",
+			Usage:  "slack hook url",
 			EnvVar: "SLACK_URL",
 		},
 	}
@@ -67,7 +67,7 @@ func startAlerter(c *cli.Context) error {
 	natsSubscriptionId := c.String("nats-subscription-id")
 	natsUrl := c.String("nats-endpoint")
 
-	sc, err := stan.Connect(clusterID, natsSubscriptionId, stan.NatsURL(natsUrl))
+	sc, err := stan.Connect(clusterID, natsSubscriptionId+uuid.NewV4().String(), stan.NatsURL(natsUrl))
 	if err != nil {
 		log.Fatalf("Can't connect: %v.\nMake sure a NATS Streaming Server is running at: %s", err, natsUrl)
 	}
@@ -76,9 +76,9 @@ func startAlerter(c *cli.Context) error {
 
 	startOpt := stan.DeliverAllAvailable()
 
-	alerter := NewSlackAlerter(c.String("nats-endpoint"))
+	alerter := NewSlackAlerter(c.String("slack-url"))
 
-	sub, err := sc.QueueSubscribe(topic, natsSubscriptionId+uuid.NewV4().String(), handler(alerter), startOpt, stan.DurableName("slack-alerter"))
+	_, err = sc.QueueSubscribe(topic, natsSubscriptionId, handler(alerter), startOpt, stan.DurableName("slack-alerter"))
 	if err != nil {
 		sc.Close()
 		log.Fatal(err)
@@ -92,8 +92,7 @@ func startAlerter(c *cli.Context) error {
 		for _ = range signalChan {
 			fmt.Printf("\nReceived an interrupt, unsubscribing and closing connection...\n\n")
 			// Do not unsubscribe a durable on exit, except if asked to.
-			sub.Unsubscribe()
-
+			//sub.Unsubscribe()
 			sc.Close()
 			cleanupDone <- true
 		}
@@ -111,7 +110,10 @@ func handler(alerter Alerter) func(msg *stan.Msg) {
 		err := alerter.InterestRegistered(emailAddress)
 
 		if err != nil {
-			fmt.Printf("Error on consuming: %v", err)
+			fmt.Printf("Error on consuming: %v\n", err)
+		} else {
+			msg.Ack()
+			log.Println("acked")
 		}
 	}
 }
