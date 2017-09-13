@@ -1,11 +1,17 @@
+# TO Build
+
+```
+make build
+```
+
 # Setup Infra
 
 ```
-docker-compose up -d
+make setup
 ```
 
 # To Run
 
 ```
-go run main.go alerter.go
+make run
 ```
